@@ -90,16 +90,19 @@ function concatWavs(a: Buffer, b: Buffer): Buffer {
 // Sound playback — cross-platform via CLI utilities
 // ---------------------------------------------------------------------------
 
-function playSound(soundType: 'error' | 'success') {
+function playSound(context: vscode.ExtensionContext, soundType: 'error' | 'success') {
   const config = vscode.workspace.getConfiguration('enthaMone');
   if (!config.get<boolean>('enabled', true)) {
     return;
   }
 
   const customPath = config.get<string>(`${soundType}Sound`, '').trim();
-  const filePath = customPath && fs.existsSync(customPath)
-    ? customPath
-    : path.join(soundDir, `${soundType}.wav`);
+  let filePath: string;
+  if (customPath && fs.existsSync(customPath)) {
+    filePath = customPath;
+  } else {
+    filePath = context.asAbsolutePath(path.join('src', 'entha-mone.wav'));
+  }
 
   const volume = config.get<number>('volume', 1.0);
   let cmd: string;
@@ -158,9 +161,9 @@ export function activate(context: vscode.ExtensionContext) {
       const current = countErrors();
 
       if (current > previousErrorCount) {
-        playSound('error');
+        playSound(context, 'error');
       } else if (current === 0 && previousErrorCount > 0) {
-        playSound('success');
+        playSound(context, 'success');
       }
 
       previousErrorCount = current;

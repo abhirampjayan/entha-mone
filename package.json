@@ -3,7 +3,8 @@
   "displayName": "Entha Mone",
   "description": "Plays a sound when you get errors, and celebrates when they're all gone",
   "version": "0.1.0",
-  "publisher": "abhiram",
+  "publisher": "abhirampjayan",
+  "author": "abhirampjayan",
   "engines": {
     "vscode": "^1.85.0"
   },
