@@ -1,0 +1,68 @@
+{
+  "name": "entha-mone",
+  "displayName": "Entha Mone",
+  "description": "Plays a sound when you get errors, and celebrates when they're all gone",
+  "version": "0.1.0",
+  "publisher": "abhiram",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "keywords": ["sound", "error", "audio", "notification", "faah"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Entha Mone",
+      "properties": {
+        "enthaMone.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable Entha Mone sounds"
+        },
+        "enthaMone.errorSound": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to a custom sound file to play on new errors (WAV/MP3/AIFF). Leave empty to use the built-in sound."
+        },
+        "enthaMone.successSound": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to a custom sound file to play when all errors are cleared. Leave empty to use the built-in sound."
+        },
+        "enthaMone.volume": {
+          "type": "number",
+          "default": 1.0,
+          "minimum": 0.1,
+          "maximum": 1.0,
+          "description": "Playback volume (0.1 – 1.0, macOS only)"
+        },
+        "enthaMone.debounceMs": {
+          "type": "number",
+          "default": 500,
+          "minimum": 0,
+          "maximum": 5000,
+          "description": "Milliseconds to wait after the last diagnostic change before triggering a sound. Prevents rapid-fire sounds while you type."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "enthaMone.toggle",
+        "title": "Entha Mone: Toggle sounds on/off"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  }
+}
