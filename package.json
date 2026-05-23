@@ -18,6 +18,7 @@
     "notification",
     "faah"
   ],
+  "icon": "icon.png",
   "activationEvents": [
     "onStartupFinished"
   ],

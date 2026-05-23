@@ -1,6 +1,8 @@
 .vscode/**
 node_modules/**
 src/*.ts
+src/*.js
+out/example.js
 .gitignore
 tsconfig.json
 **/*.map
