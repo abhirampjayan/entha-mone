@@ -1,8 +1,8 @@
 .vscode/**
 node_modules/**
-src/*.ts
-src/*.js
+src/**
 out/example.js
 .gitignore
 tsconfig.json
+package-lock.json
 **/*.map

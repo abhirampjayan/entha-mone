@@ -5,6 +5,11 @@
   "version": "0.1.0",
   "publisher": "abhirampjayan",
   "author": "abhirampjayan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abhirampjayan/entha-mone"
+  },
   "engines": {
     "vscode": "^1.120.0"
   },

@@ -6,10 +6,78 @@ import * as fs from 'fs';
 let soundDir: string;
 
 // ---------------------------------------------------------------------------
+// WAV generation — produces sine-wave beeps entirely in memory so no binary
+// files need to be bundled in the VSIX.
+// ---------------------------------------------------------------------------
+
+function generateBeepWav(frequency: number, durationSec: number, sampleRate = 44100): Buffer {
+  const numSamples = Math.floor(sampleRate * durationSec);
+  const dataSize = numSamples * 2;
+  const buf = Buffer.alloc(44 + dataSize);
+
+  buf.write('RIFF', 0);
+  buf.writeUInt32LE(36 + dataSize, 4);
+  buf.write('WAVE', 8);
+  buf.write('fmt ', 12);
+  buf.writeUInt32LE(16, 16);
+  buf.writeUInt16LE(1, 20);
+  buf.writeUInt16LE(1, 22);
+  buf.writeUInt32LE(sampleRate, 24);
+  buf.writeUInt32LE(sampleRate * 2, 28);
+  buf.writeUInt16LE(2, 32);
+  buf.writeUInt16LE(16, 34);
+  buf.write('data', 36);
+  buf.writeUInt32LE(dataSize, 40);
+
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    const attack  = Math.min(t / 0.01, 1);
+    const release = Math.min((durationSec - t) / 0.05, 1);
+    const sample  = Math.sin(2 * Math.PI * frequency * t) * attack * release * 28000;
+    buf.writeInt16LE(Math.round(sample), 44 + i * 2);
+  }
+
+  return buf;
+}
+
+function concatWavs(a: Buffer, b: Buffer): Buffer {
+  const pcmA = a.subarray(44);
+  const pcmB = b.subarray(44);
+  const dataSize = pcmA.length + pcmB.length;
+  const header = Buffer.from(a.subarray(0, 44));
+  header.writeUInt32LE(36 + dataSize, 4);
+  header.writeUInt32LE(dataSize, 40);
+  return Buffer.concat([header, pcmA, pcmB]);
+}
+
+function ensureSounds(dir: string) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  const errorPath   = path.join(dir, 'error.wav');
+  const successPath = path.join(dir, 'success.wav');
+
+  if (!fs.existsSync(errorPath)) {
+    fs.writeFileSync(errorPath, concatWavs(
+      generateBeepWav(520, 0.12),
+      generateBeepWav(380, 0.18)
+    ));
+  }
+
+  if (!fs.existsSync(successPath)) {
+    fs.writeFileSync(successPath, concatWavs(
+      generateBeepWav(440, 0.10),
+      generateBeepWav(660, 0.15)
+    ));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Sound playback — cross-platform via CLI utilities
 // ---------------------------------------------------------------------------
 
-function playSound(context: vscode.ExtensionContext, soundType: 'error' | 'success') {
+function playSound(_context: vscode.ExtensionContext, soundType: 'error' | 'success') {
   const config = vscode.workspace.getConfiguration('enthaMone');
   if (!config.get<boolean>('enabled', true)) {
     return;
@@ -20,7 +88,7 @@ function playSound(context: vscode.ExtensionContext, soundType: 'error' | 'succe
   if (customPath && fs.existsSync(customPath)) {
     filePath = customPath;
   } else {
-    filePath = context.asAbsolutePath(path.join('src', 'entha-mone.wav'));
+    filePath = path.join(soundDir, `${soundType}.wav`);
   }
 
   const volume = config.get<number>('volume', 1.0);
@@ -28,7 +96,6 @@ function playSound(context: vscode.ExtensionContext, soundType: 'error' | 'succe
 
   switch (process.platform) {
     case 'darwin':
-      // afplay accepts -v for volume (0.0–255.0 but 1.0 is full)
       cmd = `afplay -v ${volume} "${filePath}"`;
       break;
     case 'linux':
@@ -41,7 +108,6 @@ function playSound(context: vscode.ExtensionContext, soundType: 'error' | 'succe
       return;
   }
 
-  console.log(`[entha-mone] playing: ${filePath}`);
   exec(cmd, (err) => {
     if (err) {
       console.error(`[entha-mone] playback failed: ${err.message}`);
@@ -55,6 +121,7 @@ function playSound(context: vscode.ExtensionContext, soundType: 'error' | 'succe
 
 export function activate(context: vscode.ExtensionContext) {
   soundDir = path.join(context.globalStorageUri.fsPath, 'sounds');
+  ensureSounds(soundDir);
 
   const testCommand = vscode.commands.registerCommand('enthaMone.testSound', () => {
     playSound(context, 'error');
@@ -70,7 +137,6 @@ export function activate(context: vscode.ExtensionContext) {
     );
   });
 
-  // Play error sound when a terminal closes with a non-zero exit code
   const onTerminalClose = vscode.window.onDidCloseTerminal((terminal) => {
     const code = terminal.exitStatus?.code;
     if (code !== undefined && code !== 0) {
@@ -78,9 +144,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // Play error sound when a shell command (with shell integration) exits non-zero
   const onShellExec = vscode.window.onDidEndTerminalShellExecution((e) => {
-    console.log(`[entha-mone] shell exec ended, exit code: ${e.exitCode}`);
     if (e.exitCode !== undefined && e.exitCode !== 0) {
       playSound(context, 'error');
     }
